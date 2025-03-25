@@ -1,1 +1,1 @@
-# work
+It's work in logarithmica
