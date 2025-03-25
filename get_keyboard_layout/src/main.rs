@@ -1,17 +1,25 @@
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
+// API for get keyboard layout
 fn get_keyboard_layout() -> String {
     #[cfg(target_os = "windows")] {
-        "Windows layout".to_string()
+        "TODO".to_string()
     }
 
     #[cfg(target_os = "linux")] {
-        "Linux layout".to_string()
+        "TODO".to_string()
     }
 
     #[cfg(target_os = "macos")] {
         get_keyboard_layout_mac()
     }
+}
+
+// Event for change layout
+fn spaw_lang(new_layout: &str) {
+    println!("Изменение раскладки: {}", new_layout);
 }
 
 fn get_keyboard_layout_mac() -> String {
@@ -24,14 +32,14 @@ fn get_keyboard_layout_mac() -> String {
     
     if output.status.success() {
         let result = String::from_utf8_lossy(&output.stdout);
-        let collection: Vec<&str> = result.trim().split('.').collect();
+        let parts: Vec<&str> = result.trim().split('.').collect();
 
-        match collection.last().copied() {
-            Some(layout) => String::from(map_layout_to_lang(layout)),
-            None => String::from("Unknown")
-        }
+        parts
+            .last()
+            .map(|&layout| map_layout_to_lang(layout).to_string())
+            .unwrap_or_else(|| "Unknown".to_string())
     } else {
-        String::from("Unknown")
+        "Unknown".to_string()
     }
 }
 
@@ -43,6 +51,24 @@ fn map_layout_to_lang(layout: &str) -> &str {
     }
 }
 
+// Пока не нашёл нормального способа получить событие изменения раскладки клавиатуры
+// Поэтому пока что буду опрашивать каждые 250 мс
+fn track_keyboard_layout_changes() {
+    let mut last_layout = get_keyboard_layout();
+    loop {
+        let current_layout = get_keyboard_layout();
+        thread::sleep(Duration::from_millis(250));
+        if current_layout != last_layout {
+            last_layout = current_layout;
+            spaw_lang(&last_layout)
+        }
+    }
+}
+
 fn main() {
-    println!("{}", get_keyboard_layout());    
+    let handle = thread::spawn(|| {
+        track_keyboard_layout_changes();
+    });
+
+    handle.join().unwrap();
 }
